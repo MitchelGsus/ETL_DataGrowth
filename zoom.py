@@ -16,7 +16,7 @@ class ZoomClient:
         self.client_id = client_id
         self.client_secret = client_secret
         self.access_token = self.get_access_token()
-        
+
     # Obtener token de acceso
     def get_access_token(self):
         data = {
@@ -83,7 +83,21 @@ class ZoomClient:
         "page_size": 300
     }
         return requests.get(url, headers=headers, params=params).json()
-
+    
+#--------------------------> OBTENER LA LISTA DE PARTICIPANTES DE LA ÚLTIMA REUNIÓN <--------------------------
+    def get_participants_last_meeting(self, nombre_archivo=None):
+        # Obtener la información de la última reunión
+        rq_last_meeting = self.get_last_meeting()
+        # Obtener la ID de la última reunión
+        meeting_id = ', '.join([str(meeting['id']) for meeting in rq_last_meeting['meetings']])
+        # Obtener los participantes de la última reunión
+        rq_participantes = self.get_meetings_by_id(meetingId=meeting_id)
+        # Convertir el JSON a un DataFrame
+        df = pd.DataFrame(rq_participantes['participants'])
+        # Exportar a CSV si es necesario
+        if nombre_archivo:
+            df.to_csv(nombre_archivo, index=False)
+        return df
 
 
 # client = ZoomClient(account_id=ZOOM_ACCOUNT_ID, client_id=ZOOM_CLIENT_ID, client_secret=ZOOM_CLIENT_SECRET)
