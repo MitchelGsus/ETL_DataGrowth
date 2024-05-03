@@ -15,8 +15,8 @@ class ZoomClient:
         self.account_id = account_id
         self.client_id = client_id
         self.client_secret = client_secret
-        #tkn = 'eyJzdiI6IjAwMDAwMSIsImFsZyI6IkhTNTEyIiwidiI6IjIuMCIsImtpZCI6ImZkMDFmYmQ0LWYxZjMtNDFmNy1iYmFkLThlZGZkMWZlMjdmMyJ9.eyJhdWQiOiJodHRwczovL29hdXRoLnpvb20udXMiLCJ1aWQiOiJoQm1HRk4wSFNJS2VpNEF2M3BxUWhnIiwidmVyIjo5LCJhdWlkIjoiZWIwYzkzNmQ3Yjc4NGRkMmVhZGFlNDM2Y2Q4YjE3M2QiLCJuYmYiOjE3MTQ3NDU0MzIsImNvZGUiOiJpMlR6OWVfTlRNS0ZqUTIzUTltZDJ3OEtnM3R2R0paTjAiLCJpc3MiOiJ6bTpjaWQ6bEs4STNyWXRSVGFSRnM1ZURVZmhHZyIsImdubyI6MCwiZXhwIjoxNzE0NzQ5MDMyLCJ0eXBlIjozLCJpYXQiOjE3MTQ3NDU0MzIsImFpZCI6Ikk5ZGlrbWxRUkUtVnkyTUlJX00yelEifQ.D6Ry0oGEpZuDPi1TAnuC0FhRS2b9nILUkMm-cKaSqIqRhat68VIZ7wGEKQBbZkL72WHDbirGZ1y55hPjJ2vLAw'
         self.access_token = self.get_access_token()
+        
     # Obtener token de acceso
     def get_access_token(self):
         data = {
