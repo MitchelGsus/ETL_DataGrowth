@@ -2,6 +2,5 @@
 /Lib
 pyvenv.cfg
 /Scripts
-.env
 /__pycache__
 /share
