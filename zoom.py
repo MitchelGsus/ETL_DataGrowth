@@ -46,8 +46,21 @@ class ZoomClient:
         headers = {
             "Authorization": f"Bearer {self.access_token}"
         }
-        url = f"https://api.zoom.us/v2/users/me/meetings?type=past&page_size=1&sort_by=start_time&sort_order=desc"
-        return requests.get(url, headers=headers).json()
+        url = f"https://api.zoom.us/v2/users/me/meetings"
+        params = {
+        "type": "past",
+        "page_size": 10,
+        "sort_by": "start_time",
+        "sort_order": "asc"
+        }
+        response = requests.get(url, headers=headers, params=params).json()
+        meetings = response.get("meetings", [])
+        if meetings:
+            last_meeting = meetings[-1]
+            return last_meeting
+        else:
+            return None
+        #return print(requests.get(url, headers=headers, params=params).json())
 
 #------------------------> Obtener reunión mediante una fecha de inicio y fecha de fin. <------------------------
     def get_last_meeting_date(self, from_date=None, to_date=None):
@@ -93,20 +106,20 @@ class ZoomClient:
         # Obtener la información de la última reunión
         rq_last_meeting = self.get_last_meeting()
         # Obtener la ID de la última reunión
-        topic = [meeting['topic']for meeting in rq_last_meeting['meetings']]
-        meeting_id = ', '.join([str(meeting['id']) for meeting in rq_last_meeting['meetings']])
+        topic = rq_last_meeting['topic']
+        meeting_id = rq_last_meeting['id']
         # Obtener los participantes de la última reunión
         rq_participantes = self.get_participants_by_id(meetingId=meeting_id)
         # Convertir el JSON a un DataFrame
         df = pd.DataFrame(rq_participantes['participants'])
-        #df['meeting_name'] = topic[0]
-        df.insert(0, 'meeting_name', topic[0])
+        df.insert(0, 'meeting_name', topic)
         # Exportar a CSV si es necesario
         if nombre_archivo is not None:
-            df.to_csv(f'{self.base_dir}/{self.folders[0]}/{nombre_archivo}.csv', index=False, encoding='latin-1')
+            self.bronze_layer(data = df, topic = nombre_archivo)
         else:
-            df.to_csv(f"{self.base_dir}/{self.folders[0]}/archivo_xd.csv", index=False, encoding='latin-1')
+            self.bronze_layer(data = df, topic = topic)
         return df
+    
 #---------------------> OBTENER LA LISTA DE PARTICIPANTES MEDIANTE EL ID DE UNA REUNIÓN <---------------------
     def fun_get_participants_by_meeting_id(self, meetingId, nombre_archivo=None):
         headers = {
@@ -124,7 +137,16 @@ class ZoomClient:
         df.insert(0, 'meeting_name', topic)
         # Exportar a CSV si es necesario
         if nombre_archivo is not None:
-            df.to_csv(f'{self.base_dir}/{self.folders[0]}/{nombre_archivo}', index=False, encoding='latin-1')
+            self.bronze_layer(data = df, topic = nombre_archivo) 
         else:
-            df.to_csv(f"{self.base_dir}/{self.folders[0]}/archivo_xd.csv", index=False, encoding='latin-1')
+            self.bronze_layer(data = df, topic = topic)
+        return df
+    
+#----------------------------------------> MEDALLION ARCHITECTURE <----------------------------------------
+    def bronze_layer(self, data, topic = None):
+        df = pd.DataFrame(data)
+        #nombre_fecha = str(df.iloc[0]['join_time'].split('T')[0])
+        nombre_fecha = str((pd.to_datetime(df['join_time']) - pd.Timedelta(hours=5)).dt.date.iloc[0])
+        #aca va el código de restar día
+        df = df.to_csv(f'{self.base_dir}/{self.folders[0]}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
         return df
