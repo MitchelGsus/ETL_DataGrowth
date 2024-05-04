@@ -1,6 +1,8 @@
-/Lib
-pyvenv.cfg
-/Scripts
 /__pycache__
-.env
+/Lib
+/MedallionArchitecture
+/Scripts
 /share
+.env
+pyvenv.cfg
+
