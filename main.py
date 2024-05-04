@@ -12,4 +12,6 @@ ZOOM_CLIENT_SECRET = os.getenv('ZOOM_CLIENT_SECRET')
 client = ZoomClient(account_id=ZOOM_ACCOUNT_ID, client_id=ZOOM_CLIENT_ID, client_secret=ZOOM_CLIENT_SECRET)
 
 #--------------------------> OBTENER LA LISTA DE PARTICIPANTES DE LA ÚLTIMA REUNIÓN <--------------------------
-client.get_participants_last_meeting()
+client.fun_get_participants_last_meeting('xddddd.csv')
+#--------------------------> OBTENER LA LISTA DE PARTICIPANTES MEDIANTE LA ID DE UNA REUNIÓN <--------------------------
+""" client.fun_get_participants_by_meeting_id('85185559105') """
