@@ -1,7 +1,7 @@
 ##  DESCARGA Y CONFIGURACIÓN
 -  Clone el repositorio.
 	```sh
-	$ git clone https://github.com/MitchelGsus/ETL_DataGrowth.git
+	git clone https://github.com/MitchelGsus/ETL_DataGrowth.git
 	```
 -  Vaya al directorio del proyecto.
 	```sh
@@ -9,11 +9,11 @@
 	```
 -  Cree un entorno virtual.
 	```sh
-	 python -m venv etl-dg
+	 python -m venv venv
 	```
 -  Active el entorno virtual.
 	```sh
-	 venv\Scripts\activate
+	 venv\Scripts\activate.ps1
 	```
 -  Instale las dependencias del proyecto
 	```sh
