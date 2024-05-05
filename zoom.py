@@ -49,7 +49,7 @@ class ZoomClient:
         url = f"https://api.zoom.us/v2/users/me/meetings"
         params = {
         "type": "past",
-        "page_size": 10,
+        "page_size": 9,
         "sort_by": "start_time",
         "sort_order": "asc"
         }
@@ -61,6 +61,7 @@ class ZoomClient:
         else:
             return None
         #return print(requests.get(url, headers=headers, params=params).json())
+
 
 #------------------------> Obtener reunión mediante una fecha de inicio y fecha de fin. <------------------------
     def get_last_meeting_date(self, from_date=None, to_date=None):
@@ -102,7 +103,7 @@ class ZoomClient:
 
 #------------------------------------------> FUNCIONES PARA UTILIZAR <------------------------------------------
 #--------------------------> OBTENER LA LISTA DE PARTICIPANTES DE LA ÚLTIMA REUNIÓN <--------------------------
-    def fun_get_participants_last_meeting(self, nombre_archivo=None):
+    def fun_get_participants_last_meeting(self):
         # Obtener la información de la última reunión
         rq_last_meeting = self.get_last_meeting()
         # Obtener la ID de la última reunión
@@ -113,15 +114,15 @@ class ZoomClient:
         # Convertir el JSON a un DataFrame
         df = pd.DataFrame(rq_participantes['participants'])
         df.insert(0, 'meeting_name', topic)
+        nombre_fecha = str((pd.to_datetime(df['join_time']) - pd.Timedelta(hours=5)).dt.date.iloc[0])
         # Exportar a CSV si es necesario
-        if nombre_archivo is not None:
-            self.bronze_layer(data = df, topic = nombre_archivo)
-        else:
-            self.bronze_layer(data = df, topic = topic)
+        self.bronze_layer(data = df, topic = topic, nombre_fecha= nombre_fecha)
+        self.silver_layer(topic = topic, nombre_fecha= nombre_fecha)
+        self.gold_layer(topic = topic, nombre_fecha= nombre_fecha)
         return df
     
 #---------------------> OBTENER LA LISTA DE PARTICIPANTES MEDIANTE EL ID DE UNA REUNIÓN <---------------------
-    def fun_get_participants_by_meeting_id(self, meetingId, nombre_archivo=None):
+    def fun_get_participants_by_meeting_id(self, meetingId):
         headers = {
             "Authorization": f"Bearer {self.access_token}"
         }
@@ -135,18 +136,36 @@ class ZoomClient:
         topic = rq_topic_meeting['topic']
         df = pd.DataFrame(rq_participantes['participants'])
         df.insert(0, 'meeting_name', topic)
-        # Exportar a CSV si es necesario
-        if nombre_archivo is not None:
-            self.bronze_layer(data = df, topic = nombre_archivo) 
-        else:
-            self.bronze_layer(data = df, topic = topic)
+        nombre_fecha = str((pd.to_datetime(df['join_time']) - pd.Timedelta(hours=5)).dt.date.iloc[0])
+        self.bronze_layer(data = df, topic = topic, nombre_fecha= nombre_fecha)
+        self.silver_layer(topic = topic, nombre_fecha= nombre_fecha)
+        self.gold_layer(topic = topic, nombre_fecha= nombre_fecha)
         return df
     
 #----------------------------------------> MEDALLION ARCHITECTURE <----------------------------------------
-    def bronze_layer(self, data, topic = None):
+#----------------------------------------> BRONZE LAYER <----------------------------------------
+    def bronze_layer(self, data, topic = None, nombre_fecha = None):
         df = pd.DataFrame(data)
-        #nombre_fecha = str(df.iloc[0]['join_time'].split('T')[0])
-        nombre_fecha = str((pd.to_datetime(df['join_time']) - pd.Timedelta(hours=5)).dt.date.iloc[0])
-        #aca va el código de restar día
-        df = df.to_csv(f'{self.base_dir}/{self.folders[0]}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
+        ruta_bronze = f'{self.base_dir}/{self.folders[0]}'
+        ruta_silver = f'{self.base_dir}/{self.folders[1]}'
+        # No quitar esa mmdota.
+        topic = topic.replace(': ', '_')
+        df = df.to_csv(f'{ruta_bronze}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
+        return df
+#----------------------------------------> SILVER LAYER <----------------------------------------    
+    def silver_layer(self, topic = None, nombre_fecha = None):
+        ruta_bronze = f'{self.base_dir}/{self.folders[0]}'
+        ruta_silver = f'{self.base_dir}/{self.folders[1]}'
+        topic = topic.replace(': ', '_') 
+        df = pd.read_csv(f'{ruta_bronze}/{topic}_{nombre_fecha}.csv', encoding='latin-1')
+        df.to_csv(f'{ruta_silver}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
+        return df
+    
+    def gold_layer(self, topic = None, nombre_fecha = None):
+        ruta_bronze = f'{self.base_dir}/{self.folders[0]}'
+        ruta_silver = f'{self.base_dir}/{self.folders[1]}'
+        ruta_gold = f'{self.base_dir}/{self.folders[2]}'
+        topic = topic.replace(': ', '_')
+        df = pd.read_csv(f'{ruta_silver}/{topic}_{nombre_fecha}.csv', encoding='latin-1')
+        df.to_csv(f'{ruta_gold}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
         return df
