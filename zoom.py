@@ -2,7 +2,8 @@ import requests
 import os
 from dotenv import load_dotenv
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
+import re
 
 ## Token is = 
 load_dotenv()
@@ -49,7 +50,7 @@ class ZoomClient:
         url = f"https://api.zoom.us/v2/users/me/meetings"
         params = {
         "type": "past",
-        "page_size": 9,
+        "page_size": 11,
         "sort_by": "start_time",
         "sort_order": "asc"
         }
@@ -141,13 +142,16 @@ class ZoomClient:
         self.silver_layer(topic = topic, nombre_fecha= nombre_fecha)
         self.gold_layer(topic = topic, nombre_fecha= nombre_fecha)
         return df
-    
+
+    def limpiar_texto(self, texto):
+        texto = re.sub(r'\s+', ' ', texto) 
+        texto = re.sub(r'[^\w\sáéíóúü]', '', texto)
+        return texto.strip()  
 #----------------------------------------> MEDALLION ARCHITECTURE <----------------------------------------
 #----------------------------------------> BRONZE LAYER <----------------------------------------
     def bronze_layer(self, data, topic = None, nombre_fecha = None):
         df = pd.DataFrame(data)
         ruta_bronze = f'{self.base_dir}/{self.folders[0]}'
-        ruta_silver = f'{self.base_dir}/{self.folders[1]}'
         # No quitar esa mmdota.
         topic = topic.replace(': ', '_')
         df = df.to_csv(f'{ruta_bronze}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
@@ -158,14 +162,63 @@ class ZoomClient:
         ruta_silver = f'{self.base_dir}/{self.folders[1]}'
         topic = topic.replace(': ', '_') 
         df = pd.read_csv(f'{ruta_bronze}/{topic}_{nombre_fecha}.csv', encoding='latin-1')
-        df.to_csv(f'{ruta_silver}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
-        return df
+        df_final = df[['meeting_name', 'name', 'user_email', 'join_time', 'leave_time', 'duration']]
+        df_final = df_final.rename(columns={'meeting_name': 'nombre_reunion', 'name': 'nombre', 'user_email': 'correo_electronico', 'join_time': 'tiempo_ingreso', 'leave_time': 'tiempo_salio', 'duration': 'duracion_segundos'})
+        df_final.astype(str)
+        # Convertir a formato datetime
+        df_final['tiempo_ingreso'] = pd.to_datetime(df_final['tiempo_ingreso'])
+        df_final['tiempo_salio'] = pd.to_datetime(df_final['tiempo_salio'])
+        # A
+        df_final['tiempo_ingreso'] = df_final['tiempo_ingreso'] - pd.Timedelta(hours=5)
+        df_final['tiempo_salio'] = df_final['tiempo_salio'] - pd.Timedelta(hours=5)
+        # B
+        df_final['tiempo_ingreso'] = df_final['tiempo_ingreso'].dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        df_final['tiempo_salio'] = df_final['tiempo_salio'].dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        # B.2
+        df_final['tiempo_ingreso'] = pd.to_datetime(df_final['tiempo_ingreso'])
+        df_final['tiempo_salio'] = pd.to_datetime(df_final['tiempo_salio'])
+        # C
+        df_final['fecha_ingreso'] = df_final['tiempo_ingreso'].dt.date
+        df_final['hora_ingreso'] = df_final['tiempo_ingreso'].dt.time
+        df_final['fecha_salio'] = df_final['tiempo_salio'].dt.date
+        df_final['hora_salio'] = df_final['tiempo_salio'].dt.time
+        # D
+        df_final['tiempo_ingreso'] = pd.to_datetime(df_final['tiempo_ingreso']).dt.tz_localize(None)
+        df_final['tiempo_salio'] = pd.to_datetime(df_final['tiempo_salio']).dt.tz_localize(None)
+        # F
+        # df_final['hora_ingreso'] = pd.to_datetime(df_final['hora_ingreso'], format='%H:%M:%S')
+        # df_final['hora_ingreso'] = df_final['hora_ingreso'] - timedelta(hours=5)
+        # df_final['hora_ingreso'] = df_final['hora_ingreso'].dt.strftime('%H:%M:%S')
+        df_final[['hora_ingreso', 'hora_salio']] = df_final[['hora_ingreso', 'hora_salio']].apply(lambda x: pd.to_datetime(x, format='%H:%M:%S') - timedelta(hours=5))
+        df_final[['hora_ingreso', 'hora_salio']] = df_final[['hora_ingreso', 'hora_salio']].apply(lambda x: x.dt.strftime('%H:%M:%S'))
+        # G
+        df_final['nombre'] = df_final['nombre'].str.lower()
+        df_final['nombre'] = df_final['nombre'].apply(self.limpiar_texto)
+        df_final = df_final[['nombre_reunion', 'nombre', 'correo_electronico', 'fecha_ingreso', 'hora_ingreso', 'fecha_salio', 'hora_salio', 'duracion_segundos']]
+
+        df_final.to_csv(f'{ruta_silver}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
+        return df_final
+#----------------------------------------> GOLD LAYER <----------------------------------------   
     
     def gold_layer(self, topic = None, nombre_fecha = None):
-        ruta_bronze = f'{self.base_dir}/{self.folders[0]}'
         ruta_silver = f'{self.base_dir}/{self.folders[1]}'
         ruta_gold = f'{self.base_dir}/{self.folders[2]}'
         topic = topic.replace(': ', '_')
         df = pd.read_csv(f'{ruta_silver}/{topic}_{nombre_fecha}.csv', encoding='latin-1')
-        df.to_csv(f'{ruta_gold}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
-        return df
+        df_final = df.groupby('correo_electronico').agg({
+        'nombre': 'first',
+        'fecha_ingreso': 'min',
+        'fecha_salio': 'max',
+        'hora_ingreso': 'min',
+        'hora_salio': 'max',
+        'duracion_segundos': 'sum',
+        'nombre_reunion': 'first'}).reset_index()
+
+        df_final['duracion_segundos'] = df_final['duracion_segundos'].astype(int)  # Convertir a entero
+        df_final['duracion_minutos'] = df_final['duracion_segundos'].apply(lambda x: x // 60)
+        df_final['duracion_horas'] = df_final['duracion_segundos'].apply(lambda x: str((datetime(1900, 1, 1) + timedelta(seconds=x)).time()))
+        df_final = df_final[['nombre_reunion', 'nombre', 'correo_electronico', 'fecha_ingreso', 'hora_ingreso', 'fecha_salio', 'hora_salio', 'duracion_segundos', 'duracion_minutos', 'duracion_horas']]
+        df_final.astype(str)
+
+        df_final.to_csv(f'{ruta_gold}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
+        return df_final
