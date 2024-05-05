@@ -5,4 +5,5 @@
 /share
 .env
 pyvenv.cfg
+/etl-dg
 
