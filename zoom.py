@@ -50,7 +50,7 @@ class ZoomClient:
         url = f"https://api.zoom.us/v2/users/me/meetings"
         params = {
         "type": "past",
-        "page_size": 11,
+        "page_size": 14,
         "sort_by": "start_time",
         "sort_order": "asc"
         }
@@ -76,7 +76,7 @@ class ZoomClient:
                 url += f"from={from_date}"
             if to_date is not None:
                 url += f"&to={to_date}"
-        return print(requests.get(url, headers=headers).json())
+        return requests.get(url, headers=headers).json()
     
 #--------------------------> OBTENER LA LISTA DE PARTICIPANTES MEDIANTE EL ID DE UNA REUNIÓN <--------------------------
     def get_participants_by_id(self, meetingId):
@@ -154,14 +154,15 @@ class ZoomClient:
         ruta_bronze = f'{self.base_dir}/{self.folders[0]}'
         # No quitar esa mmdota.
         topic = topic.replace(': ', '_')
-        df = df.to_csv(f'{ruta_bronze}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
-        return df
+        df = df.to_csv(f'{ruta_bronze}/{topic}_{nombre_fecha}.csv', index=False, encoding='utf-8')
+        return df #print(f'{ruta_bronze}/{topic}_{nombre_fecha}.csv')
+
 #----------------------------------------> SILVER LAYER <----------------------------------------    
     def silver_layer(self, topic = None, nombre_fecha = None):
         ruta_bronze = f'{self.base_dir}/{self.folders[0]}'
         ruta_silver = f'{self.base_dir}/{self.folders[1]}'
         topic = topic.replace(': ', '_') 
-        df = pd.read_csv(f'{ruta_bronze}/{topic}_{nombre_fecha}.csv', encoding='latin-1')
+        df = pd.read_csv(f'{ruta_bronze}/{topic}_{nombre_fecha}.csv', encoding='utf-8')
         df_final = df[['meeting_name', 'name', 'user_email', 'join_time', 'leave_time', 'duration']]
         df_final = df_final.rename(columns={'meeting_name': 'nombre_reunion', 'name': 'nombre', 'user_email': 'correo_electronico', 'join_time': 'tiempo_ingreso', 'leave_time': 'tiempo_salio', 'duration': 'duracion_segundos'})
         df_final.astype(str)
@@ -196,7 +197,7 @@ class ZoomClient:
         df_final['nombre'] = df_final['nombre'].apply(self.limpiar_texto)
         df_final = df_final[['nombre_reunion', 'nombre', 'correo_electronico', 'fecha_ingreso', 'hora_ingreso', 'fecha_salio', 'hora_salio', 'duracion_segundos']]
 
-        df_final.to_csv(f'{ruta_silver}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
+        df_final.to_csv(f'{ruta_silver}/{topic}_{nombre_fecha}.csv', index=False, encoding='utf-8')
         return df_final
 #----------------------------------------> GOLD LAYER <----------------------------------------   
     
@@ -204,7 +205,7 @@ class ZoomClient:
         ruta_silver = f'{self.base_dir}/{self.folders[1]}'
         ruta_gold = f'{self.base_dir}/{self.folders[2]}'
         topic = topic.replace(': ', '_')
-        df = pd.read_csv(f'{ruta_silver}/{topic}_{nombre_fecha}.csv', encoding='latin-1')
+        df = pd.read_csv(f'{ruta_silver}/{topic}_{nombre_fecha}.csv', encoding='utf-8')
         df_final = df.groupby('correo_electronico').agg({
         'nombre': 'first',
         'fecha_ingreso': 'min',
@@ -220,5 +221,5 @@ class ZoomClient:
         df_final = df_final[['nombre_reunion', 'nombre', 'correo_electronico', 'fecha_ingreso', 'hora_ingreso', 'fecha_salio', 'hora_salio', 'duracion_segundos', 'duracion_minutos', 'duracion_horas']]
         df_final.astype(str)
 
-        df_final.to_csv(f'{ruta_gold}/{topic}_{nombre_fecha}.csv', index=False, encoding='latin-1')
+        df_final.to_csv(f'{ruta_gold}/{topic}_{nombre_fecha}.csv', index=False, encoding='utf-8')
         return df_final
