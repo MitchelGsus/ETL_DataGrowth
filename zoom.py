@@ -20,7 +20,7 @@ class ZoomClient:
         self.client_id = client_id
         self.client_secret = client_secret
         self.access_token = self.get_access_token()
-        self.base_dir = "etl-dg/MedallionArchitecture"
+        self.base_dir = "MedallionArchitecture"
         # Nombres de las carpetas
         self.folders = ["Bronze", "Silver", "Gold"]
         if not os.path.exists(self.base_dir):
