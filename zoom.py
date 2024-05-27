@@ -41,42 +41,7 @@ class ZoomClient:
         response = requests.post("https://zoom.us/oauth/token", data=data)
         return response.json()["access_token"]
     
-#------------------------------------------------------------------------------------------------------------------------> 
-    # Obtener última reunión
-    def get_last_meeting(self):
-        headers = {
-            "Authorization": f"Bearer {self.access_token}"
-        }
-        url = f"https://api.zoom.us/v2/users/me/meetings"
-        params = {
-        "type": "past",
-        "page_size": 14,
-        "sort_by": "start_time",
-        "sort_order": "asc"
-        }
-        response = requests.get(url, headers=headers, params=params).json()
-        meetings = response.get("meetings", [])
-        if meetings:
-            last_meeting = meetings[-1]
-            return last_meeting
-        else:
-            return None
-        #return print(requests.get(url, headers=headers, params=params).json())
-
-
-#------------------------> Obtener reunión mediante una fecha de inicio y fecha de fin. <------------------------
-    def get_last_meeting_date(self, from_date=None, to_date=None):
-        headers = {
-            "Authorization": f"Bearer {self.access_token}"
-        }
-        url = "https://api.zoom.us/v2/users/me/meetings"
-        if from_date is not None or to_date is not None:
-            url += "?"
-            if from_date is not None:
-                url += f"from={from_date}"
-            if to_date is not None:
-                url += f"&to={to_date}"
-        return requests.get(url, headers=headers).json()
+#------------------------------------------> ENDPOINTS PARA UTILIZAR <------------------------------------------
     
 #--------------------------> OBTENER LA LISTA DE PARTICIPANTES MEDIANTE EL ID DE UNA REUNIÓN <--------------------------
     def get_participants_by_id(self, meetingId):
@@ -88,19 +53,27 @@ class ZoomClient:
         "page_size": 400
         }
         return requests.get(url, headers=headers, params=params).json()
-#--------------------------> OBTENER INFORMACIÓN REUNIÓN MEDIANTE EL ID <--------------------------
-    def get_info_meeting(self, meetingId):
+
+#--------------------------> OBTENER INFORMACIÓN DE LA ÚLTIMA REUNIÓN <--------------------------
+
+    # Esta es la real que me da la última reunión
+    def get_last_meeting(self):
         headers = {
             "Authorization": f"Bearer {self.access_token}"
         }
-        url = f"https://api.zoom.us/v2/past_meetings/{meetingId}"
+        url = f'https://api.zoom.us/v2/report/users/datagrowth.community@gmail.com/meetings'
         return requests.get(url, headers=headers).json()
-
-
-
-
-
-
+    
+    def test2(self, meetingId):
+        headers = {
+            "Authorization": f"Bearer {self.access_token}"
+        }
+        params = {
+            "page_size": 400
+            }
+        url = f'https://api.zoom.us/v2/report/meetings/{meetingId}/participants'
+        return print(requests.get(url, headers=headers, params=params).json())
+    
 
 #------------------------------------------> FUNCIONES PARA UTILIZAR <------------------------------------------
 #--------------------------> OBTENER LA LISTA DE PARTICIPANTES DE LA ÚLTIMA REUNIÓN <--------------------------
@@ -108,8 +81,8 @@ class ZoomClient:
         # Obtener la información de la última reunión
         rq_last_meeting = self.get_last_meeting()
         # Obtener la ID de la última reunión
-        topic = rq_last_meeting['topic']
-        meeting_id = rq_last_meeting['id']
+        topic = rq_last_meeting['meetings'][0]['topic']
+        meeting_id = rq_last_meeting['meetings'][0]['id']
         # Obtener los participantes de la última reunión
         rq_participantes = self.get_participants_by_id(meetingId=meeting_id)
         # Convertir el JSON a un DataFrame
