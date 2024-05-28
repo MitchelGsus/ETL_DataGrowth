@@ -42,7 +42,14 @@ class ZoomClient:
         return response.json()["access_token"]
     
 #------------------------------------------> ENDPOINTS PARA UTILIZAR <------------------------------------------
-    
+ #--------------------------> OBTENER INFORMACIÓN REUNIÓN MEDIANTE EL ID <--------------------------
+    def get_info_meeting(self, meetingId):
+        headers = {
+            "Authorization": f"Bearer {self.access_token}"
+        }
+        url = f"https://api.zoom.us/v2/past_meetings/{meetingId}"
+        return requests.get(url, headers=headers).json()
+       
 #--------------------------> OBTENER LA LISTA DE PARTICIPANTES MEDIANTE EL ID DE UNA REUNIÓN <--------------------------
     def get_participants_by_id(self, meetingId):
         headers = {
@@ -80,6 +87,7 @@ class ZoomClient:
     def fun_get_participants_last_meeting(self):
         # Obtener la información de la última reunión
         rq_last_meeting = self.get_last_meeting()
+        print(rq_last_meeting)
         # Obtener la ID de la última reunión
         topic = rq_last_meeting['meetings'][0]['topic']
         meeting_id = rq_last_meeting['meetings'][0]['id']
@@ -179,20 +187,36 @@ class ZoomClient:
         ruta_gold = f'{self.base_dir}/{self.folders[2]}'
         topic = topic.replace(': ', '_')
         df = pd.read_csv(f'{ruta_silver}/{topic}_{nombre_fecha}.csv', encoding='utf-8')
-        df_final = df.groupby('correo_electronico').agg({
-        'nombre': 'first',
-        'fecha_ingreso': 'min',
-        'fecha_salio': 'max',
-        'hora_ingreso': 'min',
-        'hora_salio': 'max',
-        'duracion_segundos': 'sum',
-        'nombre_reunion': 'first'}).reset_index()
+        if not df['correo_electronico'].isnull().any():
+                df_final = df.groupby('correo_electronico').agg({
+                'nombre': 'first',
+                'fecha_ingreso': 'min',
+                'fecha_salio': 'max',
+                'hora_ingreso': 'min',
+                'hora_salio': 'max',
+                'duracion_segundos': 'sum',
+                'nombre_reunion': 'first'}).reset_index()
 
-        df_final['duracion_segundos'] = df_final['duracion_segundos'].astype(int)  # Convertir a entero
-        df_final['duracion_minutos'] = df_final['duracion_segundos'].apply(lambda x: x // 60)
-        df_final['duracion_horas'] = df_final['duracion_segundos'].apply(lambda x: str((datetime(1900, 1, 1) + timedelta(seconds=x)).time()))
-        df_final = df_final[['nombre_reunion', 'nombre', 'correo_electronico', 'fecha_ingreso', 'hora_ingreso', 'fecha_salio', 'hora_salio', 'duracion_segundos', 'duracion_minutos', 'duracion_horas']]
-        df_final.astype(str)
+                df_final['duracion_segundos'] = df_final['duracion_segundos'].astype(int)  # Convertir a entero
+                df_final['duracion_minutos'] = df_final['duracion_segundos'].apply(lambda x: x // 60)
+                df_final['duracion_horas'] = df_final['duracion_segundos'].apply(lambda x: str((datetime(1900, 1, 1) + timedelta(seconds=x)).time()))
+                df_final = df_final[['nombre_reunion', 'nombre', 'correo_electronico', 'fecha_ingreso', 'hora_ingreso', 'fecha_salio', 'hora_salio', 'duracion_segundos', 'duracion_minutos', 'duracion_horas']]
+                df_final.astype(str)
+        else:
+                df_final = df.groupby('nombre').agg({
+                'correo_electronico': 'first',
+                'fecha_ingreso': 'min',
+                'fecha_salio': 'max',
+                'hora_ingreso': 'min',
+                'hora_salio': 'max',
+                'duracion_segundos': 'sum',
+                'nombre_reunion': 'first'}).reset_index()
+
+                df_final['duracion_segundos'] = df_final['duracion_segundos'].astype(int)  # Convertir a entero
+                df_final['duracion_minutos'] = df_final['duracion_segundos'].apply(lambda x: x // 60)
+                df_final['duracion_horas'] = df_final['duracion_segundos'].apply(lambda x: str((datetime(1900, 1, 1) + timedelta(seconds=x)).time()))
+                df_final = df_final[['nombre_reunion', 'nombre', 'correo_electronico', 'fecha_ingreso', 'hora_ingreso', 'fecha_salio', 'hora_salio', 'duracion_segundos', 'duracion_minutos', 'duracion_horas']]
+                df_final.astype(str)
 
         df_final.to_csv(f'{ruta_gold}/{topic}_{nombre_fecha}.csv', index=False, encoding='utf-8')
         return df_final
