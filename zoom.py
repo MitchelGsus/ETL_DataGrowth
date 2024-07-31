@@ -40,7 +40,7 @@ class ZoomClient:
         }
         response = requests.post("https://zoom.us/oauth/token", data=data)
         return response.json()["access_token"]
-    
+ 
 #------------------------------------------> ENDPOINTS PARA UTILIZAR <------------------------------------------
  #--------------------------> OBTENER INFORMACIÓN REUNIÓN MEDIANTE EL ID <--------------------------
     def get_info_meeting(self, meetingId):
@@ -50,7 +50,7 @@ class ZoomClient:
         url = f"https://api.zoom.us/v2/past_meetings/{meetingId}"
         return requests.get(url, headers=headers).json()
        
-#--------------------------> OBTENER LA LISTA DE PARTICIPANTES MEDIANTE EL ID DE UNA REUNIÓN <--------------------------
+#--------------------------> OBTENER LISTA DE PARTICIPANTES MEDIANTE EL ID DE UNA REUNIÓN <--------------------------
     def get_participants_by_id(self, meetingId):
         headers = {
             "Authorization": f"Bearer {self.access_token}"
@@ -61,7 +61,7 @@ class ZoomClient:
         }
         return requests.get(url, headers=headers, params=params).json()
 
-#--------------------------> OBTENER INFORMACIÓN DE LA ÚLTIMA REUNIÓN <--------------------------
+#--------------------------> OBTENER INFORMACIÓN DE LA ÚLTIMA REUNIÓN QUE ENTRÓ DG DEL DÍA <--------------------------
 
     # Esta es la real que me da la última reunión
     def get_last_meeting(self):
@@ -70,16 +70,6 @@ class ZoomClient:
         }
         url = f'https://api.zoom.us/v2/report/users/datagrowth.community@gmail.com/meetings'
         return requests.get(url, headers=headers).json()
-    
-    def test2(self, meetingId):
-        headers = {
-            "Authorization": f"Bearer {self.access_token}"
-        }
-        params = {
-            "page_size": 400
-            }
-        url = f'https://api.zoom.us/v2/report/meetings/{meetingId}/participants'
-        return print(requests.get(url, headers=headers, params=params).json())
     
 
 #------------------------------------------> FUNCIONES PARA UTILIZAR <------------------------------------------

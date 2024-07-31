@@ -14,7 +14,6 @@ client = ZoomClient(account_id=ZOOM_ACCOUNT_ID, client_id=ZOOM_CLIENT_ID, client
 #--------------------------> OBTENER LA LISTA DE PARTICIPANTES DE LA ÚLTIMA REUNIÓN <--------------------------
 #client.fun_get_participants_last_meeting()
 
-client.get_info_meeting('84922631143')
-client.fun_get_participants_last_meeting()
-
-#client.fun_get_participants_by_meeting_id('87463104197')
+#client.fun_get_participants_last_meeting()
+#client.get_participants_by_id('83285264309')
+client.fun_get_participants_by_meeting_id('83285264309')
