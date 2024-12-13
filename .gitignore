@@ -6,3 +6,4 @@
 .env
 pyvenv.cfg
 /venv
+!scripts/
