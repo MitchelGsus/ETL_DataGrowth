@@ -1,1 +1,0 @@
-# Store Procedure para la limpieza de datos.

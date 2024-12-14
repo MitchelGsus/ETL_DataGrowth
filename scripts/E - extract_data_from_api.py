@@ -1,1 +1,0 @@
-# Función para conectarnos a la API de ZOOM.
